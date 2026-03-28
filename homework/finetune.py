@@ -24,7 +24,7 @@ def load(model_name: str = "vlm_model") -> BaseVLM:
     model_path = Path(__file__).parent / model_name
 
     vlm = BaseVLM()
-    vlm.model = PeftModel.from_pretrained(vlm.model, model_path).to(vlm.device)
+    vlm.model = PeftModel.from_pretrained(vlm.model, str(model_path)).to(vlm.device)
     vlm.model.eval()
 
     return vlm
@@ -110,7 +110,7 @@ class VQADatasetForTraining(Dataset):
 def train(
     data_dir: Path | None = None,
     train_dataset_name: str = "train",
-    output_dir: str = "vlm_sft",
+    output_dir: str = "vlm_model",
     num_train_epochs: int = 0.05,  # use only 0.05 epoch for training
     per_device_train_batch_size: int = 8,
     gradient_accumulation_steps: int = 4,

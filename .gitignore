@@ -1,0 +1,15 @@
+data/train/*.jpg
+data/train/*_info.json
+data/valid/*.jpg
+data/valid/*_info.json
+data/train/generated_qa_pairs.json
+data/train/generated_captions.json
+supertux_data.zip
+__pycache__/
+*.pyc
+homework/vlm_model/
+homework/clip_model/
+homework/vlm_sft/
+homework/clip/
+homework/demo_train/
+*.zip

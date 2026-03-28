@@ -29,9 +29,9 @@ def load(model_name: str = "clip_model"):
     vision_encoder = vlm.model.model.vision_model
     text_encoder = vlm.model.model.text_model
     clip = CLIP(vision_encoder, text_encoder)
-    clip = PeftModel.from_pretrained(clip, model_path).to(device)
+    clip = PeftModel.from_pretrained(clip, str(model_path)).to(device)
 
-    clip.model.load_pretrained(model_path)
+    clip.model.load_pretrained(str(model_path))
     clip.model.eval()
     if device == "cuda":
         clip = clip.to(dtype=torch.bfloat16)
@@ -239,7 +239,7 @@ def get_target_modules_for_lora(model: nn.Module) -> list[str]:
 
 def train(
     data_dir: Path | None = None,
-    output_dir: str = "clip",
+    output_dir: str = "clip_model",
     num_train_epochs: float = 0.05,  # for debugging purpose, increase this once the dry run works
     per_device_train_batch_size: int = 1024,
     gradient_accumulation_steps: int = 1,

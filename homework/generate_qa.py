@@ -297,7 +297,7 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
             fb = "front"
             front_count += 1
         else:
-            fb = "behind"
+            fb = "back"
             behind_count += 1
 
         qa_pairs.append({
@@ -312,7 +312,7 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
 
         qa_pairs.append({
             "question": f"Where is {kart_name} relative to the ego car?",
-            "answer": f"{fb} and to the {lr}",
+            "answer": f"{fb} and {lr}",
         })
 
     # 5. Counting questions

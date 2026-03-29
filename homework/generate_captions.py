@@ -54,14 +54,14 @@ def generate_caption(info_path: str, view_index: int, img_width: int = 150, img_
         kart_distance = info["distance_down_track"][k["instance_id"]]
 
         if kart_cx < ego_cx:
-            lr = "to the left"
+            lr = "left"
         else:
-            lr = "to the right"
+            lr = "right"
 
         if kart_distance > ego_distance:
-            fb = "in front"
+            fb = "front"
         else:
-            fb = "behind"
+            fb = "back"
 
         captions.append(f"{kart_name} is {fb} and {lr} of the ego car.")
 

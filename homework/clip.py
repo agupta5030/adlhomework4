@@ -18,6 +18,12 @@ processor = AutoProcessor.from_pretrained("HuggingFaceTB/SmolVLM-256M-Instruct")
 device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 
+class CLIPWrapper:
+    """Wrapper so grader can access .model attribute without circular reference."""
+    def __init__(self, clip_model):
+        self.model = clip_model
+
+
 def load(model_name: str = "clip_model"):
     from pathlib import Path
 
@@ -31,7 +37,7 @@ def load(model_name: str = "clip_model"):
     clip = CLIP(vision_encoder, text_encoder)
     clip = PeftModel.from_pretrained(clip, str(model_path)).to(device)
 
-    # Merge LoRA weights into the base model so they survive .model access
+    # Merge LoRA weights into the base model so they survive grader's .model access
     clip = clip.merge_and_unload()
 
     clip.load_pretrained(str(model_path))
@@ -39,10 +45,7 @@ def load(model_name: str = "clip_model"):
     if device == "cuda":
         clip = clip.to(dtype=torch.bfloat16)
 
-    # Grader expects clip.model to exist (calls clip.model.eval() and clip.model.to())
-    clip.model = clip
-
-    return clip
+    return CLIPWrapper(clip)
 
 
 def clip_data_collator(features: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
@@ -349,8 +352,8 @@ def test(ckpt_path: str, val_dataset: str = "valid_grader"):
 
     testset = MultiChoiceQADataset(val_dataset)
 
-    clip = load(ckpt_path)
-    clip = clip.to(device)
+    wrapper = load(ckpt_path)
+    clip = wrapper.model.to(device)
 
     image_processor = tv.transforms.Compose(
         [

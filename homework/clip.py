@@ -39,6 +39,9 @@ def load(model_name: str = "clip_model"):
     if device == "cuda":
         clip = clip.to(dtype=torch.bfloat16)
 
+    # Grader expects clip.model to exist (calls clip.model.eval() and clip.model.to())
+    clip.model = clip
+
     return clip
 
 

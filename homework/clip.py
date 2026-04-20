@@ -19,7 +19,6 @@ device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is
 
 
 class CLIPWrapper:
-    """Wrapper so grader can access .model attribute without circular reference."""
     def __init__(self, clip_model):
         self.model = clip_model
 
@@ -35,12 +34,12 @@ def load(model_name: str = "clip_model"):
     vision_encoder = vlm.model.model.vision_model
     text_encoder = vlm.model.model.text_model
     clip = CLIP(vision_encoder, text_encoder)
-    clip = PeftModel.from_pretrained(clip, str(model_path)).to(device)
+    clip = PeftModel.from_pretrained(clip, model_path).to(device)
 
-    # Merge LoRA weights into the base model so they survive grader's .model access
+    # Merge LoRA weights so they are part of the base model
     clip = clip.merge_and_unload()
 
-    clip.load_pretrained(str(model_path))
+    clip.load_pretrained(model_path)
     clip.eval()
     if device == "cuda":
         clip = clip.to(dtype=torch.bfloat16)
@@ -126,12 +125,7 @@ class CLIP(nn.Module):
 
     def encode_text(self, input_ids: torch.Tensor, attention_mask: torch.Tensor = None) -> torch.Tensor:
         output = self.text_encoder(input_ids=input_ids, attention_mask=attention_mask)
-        hidden = output.last_hidden_state
-        if attention_mask is not None:
-            mask = attention_mask.unsqueeze(-1).to(hidden.dtype)
-            pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
-        else:
-            pooled = hidden.mean(dim=1)
+        pooled = output.last_hidden_state.mean(dim=1)
         projected = self.text_proj(pooled)
         projected = projected / projected.norm(dim=-1, keepdim=True)
         return projected
@@ -229,7 +223,6 @@ def compute_clip_loss(
     Returns:
         The loss for the CLIP model.
     """
-    # raise NotImplementedError("Not implemented")
     vision_features, text_features, logits = outputs
     batch_size = logits.shape[0]
     targets = torch.arange(batch_size, device=logits.device)

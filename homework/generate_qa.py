@@ -383,27 +383,8 @@ You probably need to add additional commands to Fire below.
 """
 
 
-def generate_all(data_dir: str = "data/train", output_file: str = "data/train/generated_qa_pairs.json"):
-    info_files = sorted(Path(data_dir).glob("*_info.json"))
-    all_qa = []
-    for info_file in info_files:
-        base_name = info_file.stem.replace("_info", "")
-        for view_index in range(10):
-            image_file = f"train/{base_name}_{view_index:02d}_im.jpg"
-            image_path = Path(data_dir) / f"{base_name}_{view_index:02d}_im.jpg"
-            if not image_path.exists():
-                continue
-            qa_pairs = generate_qa_pairs(str(info_file), view_index)
-            for qa in qa_pairs:
-                qa["image_file"] = image_file
-                all_qa.append(qa)
-    with open(output_file, "w") as f:
-        json.dump(all_qa, f, indent=2)
-    print(f"Generated {len(all_qa)} QA pairs, saved to {output_file}")
-
-
 def main():
-    fire.Fire({"check": check_qa_pairs, "generate_all": generate_all})
+    fire.Fire({"check": check_qa_pairs})
 
 
 if __name__ == "__main__":

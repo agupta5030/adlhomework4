@@ -27,7 +27,7 @@ class BaseVLM:
         """
         Format the question into a prompt for the VLM.
         """
-        return question
+        return f"{question}\nAnswer briefly in a few words."
 
     def generate(self, image_path: str, question: str) -> str:
         """

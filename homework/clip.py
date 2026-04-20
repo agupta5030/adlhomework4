@@ -31,8 +31,11 @@ def load(model_name: str = "clip_model"):
     clip = CLIP(vision_encoder, text_encoder)
     clip = PeftModel.from_pretrained(clip, str(model_path)).to(device)
 
-    clip.model.load_pretrained(str(model_path))
-    clip.model.eval()
+    # Merge LoRA weights into the base model so they survive .model access
+    clip = clip.merge_and_unload()
+
+    clip.load_pretrained(str(model_path))
+    clip.eval()
     if device == "cuda":
         clip = clip.to(dtype=torch.bfloat16)
 
@@ -117,7 +120,12 @@ class CLIP(nn.Module):
 
     def encode_text(self, input_ids: torch.Tensor, attention_mask: torch.Tensor = None) -> torch.Tensor:
         output = self.text_encoder(input_ids=input_ids, attention_mask=attention_mask)
-        pooled = output.last_hidden_state.mean(dim=1)
+        hidden = output.last_hidden_state
+        if attention_mask is not None:
+            mask = attention_mask.unsqueeze(-1).to(hidden.dtype)
+            pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
+        else:
+            pooled = hidden.mean(dim=1)
         projected = self.text_proj(pooled)
         projected = projected / projected.norm(dim=-1, keepdim=True)
         return projected
@@ -148,8 +156,9 @@ class CLIP(nn.Module):
     def set_trainable_parameters(self):
         for name, param in self.named_parameters():
             if "vision_encoder." in name or "text_encoder." in name:
-                continue
-            param.requires_grad = True
+                param.requires_grad = False
+            else:
+                param.requires_grad = True
 
     def gradient_checkpointing_enable(self, **kwargs):
         """
@@ -338,7 +347,7 @@ def test(ckpt_path: str, val_dataset: str = "valid_grader"):
     testset = MultiChoiceQADataset(val_dataset)
 
     clip = load(ckpt_path)
-    clip = clip.model.to(device)
+    clip = clip.to(device)
 
     image_processor = tv.transforms.Compose(
         [

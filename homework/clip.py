@@ -125,7 +125,12 @@ class CLIP(nn.Module):
 
     def encode_text(self, input_ids: torch.Tensor, attention_mask: torch.Tensor = None) -> torch.Tensor:
         output = self.text_encoder(input_ids=input_ids, attention_mask=attention_mask)
-        pooled = output.last_hidden_state.mean(dim=1)
+        hidden = output.last_hidden_state
+        if attention_mask is not None:
+            mask = attention_mask.unsqueeze(-1).to(hidden.dtype)
+            pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
+        else:
+            pooled = hidden.mean(dim=1)
         projected = self.text_proj(pooled)
         projected = projected / projected.norm(dim=-1, keepdim=True)
         return projected

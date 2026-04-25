@@ -98,8 +98,31 @@ You probably need to add additional commands to Fire below.
 """
 
 
+def generate_all(data_dir: str = "data/train"):
+    info_files = sorted(Path(data_dir).glob("*_info.json"))
+    for info_file in info_files:
+        base_name = info_file.stem.replace("_info", "")
+        all_captions = []
+        for view_index in range(10):
+            image_file = f"train/{base_name}_{view_index:02d}_im.jpg"
+            image_path = Path(data_dir) / f"{base_name}_{view_index:02d}_im.jpg"
+            if not image_path.exists():
+                continue
+            captions = generate_caption(str(info_file), view_index)
+            for cap in captions:
+                all_captions.append({
+                    "image_file": image_file,
+                    "caption": cap,
+                })
+        if all_captions:
+            output_file = Path(data_dir) / f"{base_name}_captions.json"
+            with open(output_file, "w") as f:
+                json.dump(all_captions, f)
+    print(f"Generated captions for {len(info_files)} info files")
+
+
 def main():
-    fire.Fire({"check": check_caption})
+    fire.Fire({"check": check_caption, "generate_all": generate_all})
 
 
 if __name__ == "__main__":

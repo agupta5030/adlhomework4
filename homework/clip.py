@@ -254,6 +254,8 @@ def train(
     learning_rate: float = 5e-4,
     num_workers: int = 16,
 ):
+    if data_dir is not None:
+        data_dir = Path(data_dir)
     vlm = BaseVLM()
 
     output_dir = Path(__file__).parent / output_dir

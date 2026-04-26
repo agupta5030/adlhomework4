@@ -66,9 +66,8 @@ class VQADatasetForTraining(Dataset):
     def __getitem__(self, idx: int) -> dict:
         item = self.dataset[idx]
         image = Image.open(item["image_path"]).convert("RGB")
-        # Prepare input text in chat format — must match inference prompt format
-        question_text = f"{item['question']}\nAnswer briefly in a few words."
-        input_message = [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": question_text}]}]
+        # Prepare input text in chat format
+        input_message = [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": item["question"]}]}]
         prompt = self.processor.apply_chat_template(input_message, add_generation_prompt=True)
         full_text = prompt + item["answer"]  # append the answer to the prompt
 

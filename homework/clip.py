@@ -104,7 +104,7 @@ class CaptionDatasetForTraining(Dataset):
 
 class CLIP(nn.Module):
     def __init__(
-        self, vision_encoder: nn.Module, text_encoder: nn.Module, proj_dim: int = 64, temperature: float = 0.07
+        self, vision_encoder: nn.Module, text_encoder: nn.Module, proj_dim: int = 256, temperature: float = 0.07
     ):
         super().__init__()
         self.vision_encoder = vision_encoder
@@ -280,10 +280,9 @@ def train(
     peft_config = LoraConfig(
         task_type=TaskType.FEATURE_EXTRACTION,
         inference_mode=False,
-        r=8,
+        r=16,
         lora_alpha=32,
-        lora_dropout=0.0,
-        # target_modules="all-linear",
+        lora_dropout=0.05,
         target_modules=get_target_modules_for_lora(model),
         bias="none",
     )
@@ -307,6 +306,9 @@ def train(
         gradient_accumulation_steps=gradient_accumulation_steps,
         gradient_checkpointing=True,
         learning_rate=learning_rate,
+        weight_decay=0.01,
+        warmup_ratio=0.1,
+        lr_scheduler_type="cosine",
         bf16=True if device == "cuda" else False,
         logging_steps=1,
         save_strategy="steps",

@@ -19,6 +19,10 @@ def generate_caption(info_path: str, view_index: int, img_width: int = 150, img_
 
     captions = []
 
+    # Always generate track and count captions even without ego kart
+    captions.append(f"The track is {track_name}.")
+    captions.append(f"There are {len(karts)} karts in the scene.")
+
     # find ego kart (track_id = 0)
     ego_kart = None
     other_karts = []
@@ -35,18 +39,9 @@ def generate_caption(info_path: str, view_index: int, img_width: int = 150, img_
     ego_distance = info["distance_down_track"][0]
 
     # 1. Ego car
-    # {kart_name} is the ego car.
     captions.append(f"{ego_kart['kart_name']} is the ego car.")
 
-    # 2. Counting
-    # There are {num_karts} karts in the scene.
-    captions.append(f"There are {len(karts)} karts in the scene.")
-
-    # 3. Track name
-    # The track is {track_name}.
-    captions.append(f"The track is {track_name}.")
-
-    # 4. Relative position - generate separate captions matching grader format
+    # 2. Relative position - generate separate captions matching grader format
     for k in other_karts:
         kart_name = k["kart_name"]
         kart_cx = k["center"][0]

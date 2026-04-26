@@ -42,7 +42,7 @@ def generate_caption(info_path: str, view_index: int, img_width: int = 150, img_
     ego_cx = ego_kart["center"][0]
     ego_distance = info["distance_down_track"][0]
 
-    # 2. Relative position - generate separate captions matching grader format
+    # Relative position captions
     for k in other_karts:
         kart_name = k["kart_name"]
         kart_cx = k["center"][0]

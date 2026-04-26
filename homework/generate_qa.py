@@ -234,14 +234,27 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
     with open(info_path) as f:
         info = json.load(f)
 
+    # Skip images with no karts
+    if not karts:
+        return []
+
     qa_pairs = []
 
-    # Always generate ego, count, and track questions for every view
-    ego_kart_name = info["karts"][0]
-    qa_pairs.append({
-        "question": "What kart is the ego car?",
-        "answer": ego_kart_name,
-    })
+    # Ego kart = kart closest to center of the image
+    ego_kart = None
+    for k in karts:
+        if k["is_center_kart"]:
+            ego_kart = k
+            break
+
+    other_karts = [k for k in karts if k is not ego_kart]
+
+    # Ego car name, count, and track questions
+    if ego_kart is not None:
+        qa_pairs.append({
+            "question": "What kart is the ego car?",
+            "answer": ego_kart["kart_name"],
+        })
     qa_pairs.append({
         "question": "How many karts are there in the scenario?",
         "answer": str(len(karts)),
@@ -251,24 +264,15 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
         "answer": track_name,
     })
 
-    # find the ego kart (track_id = 0) for spatial questions
-    ego_kart = None
-    other_karts = []
-    for k in karts:
-        if k["instance_id"] == 0:
-            ego_kart = k
-        else:
-            other_karts.append(k)
-
-    # Spatial questions require ego kart to be visible
+    # Spatial questions require ego kart
     left_count = 0
     right_count = 0
     front_count = 0
     behind_count = 0
 
-    if ego_kart is not None:
+    if ego_kart is not None and other_karts:
         ego_cx = ego_kart["center"][0]
-        ego_distance = info["distance_down_track"][0]
+        ego_distance = info["distance_down_track"][ego_kart["instance_id"]]
 
         for k in other_karts:
             kart_name = k["kart_name"]
@@ -304,23 +308,27 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
                 "answer": f"{fb} and {lr}",
             })
 
-    # Always generate counting questions (0 when no other karts or ego not visible)
-    qa_pairs.append({
-        "question": "How many karts are to the left of the ego car?",
-        "answer": str(left_count),
-    })
-    qa_pairs.append({
-        "question": "How many karts are to the right of the ego car?",
-        "answer": str(right_count),
-    })
-    qa_pairs.append({
-        "question": "How many karts are in front of the ego car?",
-        "answer": str(front_count),
-    })
-    qa_pairs.append({
-        "question": "How many karts are behind the ego car?",
-        "answer": str(behind_count),
-    })
+    # Only generate counting questions when count > 0
+    if left_count > 0:
+        qa_pairs.append({
+            "question": "How many karts are to the left of the ego car?",
+            "answer": str(left_count),
+        })
+    if right_count > 0:
+        qa_pairs.append({
+            "question": "How many karts are to the right of the ego car?",
+            "answer": str(right_count),
+        })
+    if front_count > 0:
+        qa_pairs.append({
+            "question": "How many karts are in front of the ego car?",
+            "answer": str(front_count),
+        })
+    if behind_count > 0:
+        qa_pairs.append({
+            "question": "How many karts are behind the ego car?",
+            "answer": str(behind_count),
+        })
 
     return qa_pairs
 

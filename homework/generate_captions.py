@@ -18,30 +18,32 @@ def generate_caption(info_path: str, view_index: int, img_width: int = 150, img_
     with open(info_path) as f:
         info = json.load(f)
 
+    # Skip images with no karts
+    if not karts:
+        return []
+
     captions = []
 
-    # Always generate track, count, and ego captions for every view
     captions.append(f"The track is {track_name}.")
     captions.append(f"There are {len(karts)} karts in the scene.")
 
-    # Ego car name is always karts[0] in the info file, even if not visible
-    ego_kart_name = info["karts"][0]
-    captions.append(f"{ego_kart_name} is the ego car.")
-
-    # find ego kart (track_id = 0) for spatial captions
+    # Ego kart = kart closest to center of the image
     ego_kart = None
-    other_karts = []
     for k in karts:
-        if k["instance_id"] == 0:
+        if k["is_center_kart"]:
             ego_kart = k
-        else:
-            other_karts.append(k)
+            break
 
-    if ego_kart is None:
+    if ego_kart is not None:
+        captions.append(f"{ego_kart['kart_name']} is the ego car.")
+
+    other_karts = [k for k in karts if k is not ego_kart]
+
+    if ego_kart is None or not other_karts:
         return captions
 
     ego_cx = ego_kart["center"][0]
-    ego_distance = info["distance_down_track"][0]
+    ego_distance = info["distance_down_track"][ego_kart["instance_id"]]
 
     # Relative position captions
     for k in other_karts:

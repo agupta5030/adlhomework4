@@ -119,6 +119,8 @@ def train(
     lora_alpha: int = 32,
     lora_dropout: float = 0.0,
     num_workers: int = 16,
+    max_samples: int = None,
+    balanced: bool = False,
 ):
     """
     Fine-tune a VLM model using LoRA.
@@ -171,7 +173,7 @@ def train(
     model.train()
 
     # Prepare datasets
-    train_dataset = VQADataset(train_dataset_name, data_dir)
+    train_dataset = VQADataset(train_dataset_name, data_dir, max_samples=max_samples, balanced=balanced)
 
     train_dataset = VQADatasetForTraining(train_dataset, processor)
 

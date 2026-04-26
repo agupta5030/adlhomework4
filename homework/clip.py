@@ -258,6 +258,7 @@ def train(
     gradient_accumulation_steps: int = 1,
     learning_rate: float = 5e-4,
     num_workers: int = 16,
+    max_samples: int = None,
 ):
     if data_dir is not None:
         data_dir = Path(data_dir)
@@ -298,7 +299,7 @@ def train(
     model.enable_input_require_grads()
 
     # load dataset
-    train_dataset = CaptionDataset("train", data_dir)
+    train_dataset = CaptionDataset("train", data_dir, max_samples=max_samples)
     train_dataset = CaptionDatasetForTraining(train_dataset, processor)
 
     training_args = TrainingArguments(

@@ -1,5 +1,7 @@
 import json
 import os
+import random
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -7,14 +9,58 @@ from typing import Any
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
+def _classify_question(question: str) -> str:
+    """Classify a QA question into a category for balanced sampling."""
+    q = question.lower()
+    if "what kart is the ego" in q:
+        return "ego"
+    if "what track" in q:
+        return "track"
+    if "how many karts are there" in q:
+        return "count"
+    if "how many karts are to the left" in q or "how many karts are to the right" in q:
+        return "spatial_count_lr"
+    if "how many karts are in front" in q or "how many karts are behind" in q:
+        return "spatial_count_fb"
+    if "to the left or right" in q:
+        return "spatial_lr"
+    if "in front of or behind" in q:
+        return "spatial_fb"
+    if "where is" in q and "relative" in q:
+        return "spatial_rel"
+    return "other"
+
+
+def _balanced_sample(qa_pairs: list, max_samples: int) -> list:
+    """Sample QA pairs balanced across question categories."""
+    by_category = defaultdict(list)
+    for qa in qa_pairs:
+        cat = _classify_question(qa["question"])
+        by_category[cat].append(qa)
+
+    categories = list(by_category.keys())
+    per_cat = max(1, max_samples // len(categories))
+
+    sampled = []
+    for cat in categories:
+        items = by_category[cat]
+        random.shuffle(items)
+        sampled.extend(items[:per_cat])
+
+    random.shuffle(sampled)
+    return sampled[:max_samples]
+
+
 class VQADataset:
-    def __init__(self, split: str, data_dir: Path = None, max_samples: int = None):
+    def __init__(self, split: str, data_dir: Path = None, max_samples: int = None, balanced: bool = False):
         """
         Initialize the VQA dataset.
 
         Args:
             split: Dataset split ('train', 'valid_grader', 'train_demo')
             data_dir: Directory containing the dataset (default: DATA_DIR)
+            max_samples: Maximum number of samples to load
+            balanced: If True, sample balanced across question categories
         """
         self.data_dir = data_dir or DATA_DIR
 
@@ -29,7 +75,10 @@ class VQADataset:
                 qa_pairs = json.load(f)
                 self.qa_pairs.extend(qa_pairs)
 
-        if max_samples is not None:
+        if max_samples is not None and balanced:
+            self.qa_pairs = _balanced_sample(self.qa_pairs, max_samples)
+        elif max_samples is not None:
+            random.shuffle(self.qa_pairs)
             self.qa_pairs = self.qa_pairs[:max_samples]
 
         print(f"Loaded {len(self.qa_pairs)} QA pairs for {split} split")
@@ -73,6 +122,7 @@ class CaptionDataset:
                 self.captions.extend(captions)
 
         if max_samples is not None:
+            random.shuffle(self.captions)
             self.captions = self.captions[:max_samples]
 
         print(f"Loaded {len(self.captions)} captions for {split} split")

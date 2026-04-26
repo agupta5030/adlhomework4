@@ -1,3 +1,4 @@
+# Reference: Colab for logic and training model
 import json
 import os
 import random

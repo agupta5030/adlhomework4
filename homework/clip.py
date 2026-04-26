@@ -127,11 +127,22 @@ class CLIP(nn.Module):
     def encode_text(self, input_ids: torch.Tensor, attention_mask: torch.Tensor = None) -> torch.Tensor:
         output = self.text_encoder(input_ids=input_ids, attention_mask=attention_mask)
         hidden = output.last_hidden_state
-        if attention_mask is not None:
-            mask = attention_mask.unsqueeze(-1).to(hidden.dtype)
-            pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
-        else:
-            pooled = hidden.mean(dim=1)
+        # Use the first EOS token hidden state instead of mean pooling
+        # EOS is used as both end-of-sequence and padding; first occurrence is the real EOS
+        eos_token_id = processor.tokenizer.eos_token_id
+        eos_mask = (input_ids == eos_token_id).to(torch.int)
+        # Find first EOS position per sequence
+        # cumsum trick: first EOS is where cumsum == 1
+        cumsum = eos_mask.cumsum(dim=1)
+        first_eos_mask = (cumsum == 1) & (eos_mask == 1)
+        # If no EOS found, fall back to last token
+        has_eos = first_eos_mask.any(dim=1)
+        first_eos_idx = first_eos_mask.to(torch.int).argmax(dim=1)
+        # For sequences without EOS, use last token
+        if not has_eos.all():
+            seq_lens = attention_mask.sum(dim=1) - 1 if attention_mask is not None else torch.full((hidden.shape[0],), hidden.shape[1] - 1, device=hidden.device)
+            first_eos_idx = torch.where(has_eos, first_eos_idx, seq_lens.long())
+        pooled = hidden[torch.arange(hidden.shape[0], device=hidden.device), first_eos_idx]
         projected = self.text_proj(pooled)
         projected = projected / projected.norm(dim=-1, keepdim=True)
         return projected
@@ -254,8 +265,8 @@ def get_target_modules_for_lora(model: nn.Module) -> list[str]:
 def train(
     data_dir: Path | None = None,
     output_dir: str = "clip_model",
-    num_train_epochs: float = 0.05,  # for debugging purpose, increase this once the dry run works
-    per_device_train_batch_size: int = 1024,
+    num_train_epochs: float = 0.25,
+    per_device_train_batch_size: int = 64,
     gradient_accumulation_steps: int = 1,
     learning_rate: float = 5e-4,
     num_workers: int = 16,

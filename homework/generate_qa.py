@@ -235,7 +235,22 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
 
     qa_pairs = []
 
-    # find the ego kart (track_id = 0)
+    # Always generate ego, count, and track questions for every view
+    ego_kart_name = info["karts"][0]
+    qa_pairs.append({
+        "question": "What kart is the ego car?",
+        "answer": ego_kart_name,
+    })
+    qa_pairs.append({
+        "question": "How many karts are there in the scenario?",
+        "answer": str(len(karts)),
+    })
+    qa_pairs.append({
+        "question": "What track is this?",
+        "answer": track_name,
+    })
+
+    # find the ego kart (track_id = 0) for spatial questions
     ego_kart = None
     other_karts = []
     for k in karts:
@@ -244,82 +259,51 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
         else:
             other_karts.append(k)
 
-    if ego_kart is None:
-        return qa_pairs
-
-    ego_cx = ego_kart["center"][0]
-    ego_cy = ego_kart["center"][1]
-    ego_distance = info["distance_down_track"][0]
-
-    # 1. Ego car question
-    # What kart is the ego car?
-    qa_pairs.append({
-        "question": "What kart is the ego car?",
-        "answer": ego_kart["kart_name"],
-    })
-
-    # 2. Total karts question
-    # How many karts are there in the scenario?
-    qa_pairs.append({
-        "question": "How many karts are there in the scenario?",
-        "answer": str(len(karts)),
-    })
-
-    # 3. Track information questions
-    # What track is this?
-    qa_pairs.append({
-        "question": "What track is this?",
-        "answer": track_name,
-    })
-
-    # 4. Relative position questions for each kart
-    # Is {kart_name} to the left or right of the ego car?
-    # Is {kart_name} in front of or behind the ego car?
-    # Where is {kart_name} relative to the ego car?
+    # Spatial questions require ego kart to be visible
     left_count = 0
     right_count = 0
     front_count = 0
     behind_count = 0
 
-    for k in other_karts:
-        kart_name = k["kart_name"]
-        kart_cx = k["center"][0]
-        kart_distance = info["distance_down_track"][k["instance_id"]]
+    if ego_kart is not None:
+        ego_cx = ego_kart["center"][0]
+        ego_distance = info["distance_down_track"][0]
 
-        if kart_cx < ego_cx:
-            lr = "left"
-            left_count += 1
-        else:
-            lr = "right"
-            right_count += 1
+        for k in other_karts:
+            kart_name = k["kart_name"]
+            kart_cx = k["center"][0]
+            kart_distance = info["distance_down_track"][k["instance_id"]]
 
-        if kart_distance > ego_distance:
-            fb = "front"
-            front_count += 1
-        else:
-            fb = "back"
-            behind_count += 1
+            if kart_cx < ego_cx:
+                lr = "left"
+                left_count += 1
+            else:
+                lr = "right"
+                right_count += 1
 
-        qa_pairs.append({
-            "question": f"Is {kart_name} to the left or right of the ego car?",
-            "answer": lr,
-        })
+            if kart_distance > ego_distance:
+                fb = "front"
+                front_count += 1
+            else:
+                fb = "back"
+                behind_count += 1
 
-        qa_pairs.append({
-            "question": f"Is {kart_name} in front of or behind the ego car?",
-            "answer": fb,
-        })
+            qa_pairs.append({
+                "question": f"Is {kart_name} to the left or right of the ego car?",
+                "answer": lr,
+            })
 
-        qa_pairs.append({
-            "question": f"Where is {kart_name} relative to the ego car?",
-            "answer": f"{fb} and {lr}",
-        })
+            qa_pairs.append({
+                "question": f"Is {kart_name} in front of or behind the ego car?",
+                "answer": fb,
+            })
 
-    # 5. Counting questions
-    # How many karts are to the left of the ego car?
-    # How many karts are to the right of the ego car?
-    # How many karts are in front of the ego car?
-    # How many karts are behind the ego car?
+            qa_pairs.append({
+                "question": f"Where is {kart_name} relative to the ego car?",
+                "answer": f"{fb} and {lr}",
+            })
+
+    # Always generate counting questions (0 when no other karts or ego not visible)
     qa_pairs.append({
         "question": "How many karts are to the left of the ego car?",
         "answer": str(left_count),

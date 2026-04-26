@@ -56,7 +56,7 @@ def generate_caption(info_path: str, view_index: int, img_width: int = 150, img_
         else:
             lr = "right"
 
-        if kart_distance > ego_distance:
+        if kart_distance < ego_distance:
             fb = "in front of"
         else:
             fb = "behind"

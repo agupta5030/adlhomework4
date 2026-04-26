@@ -286,7 +286,7 @@ def generate_qa_pairs(info_path: str, view_index: int, img_width: int = 150, img
                 lr = "right"
                 right_count += 1
 
-            if kart_distance > ego_distance:
+            if kart_distance < ego_distance:
                 fb = "front"
                 front_count += 1
             else:

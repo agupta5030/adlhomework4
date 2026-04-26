@@ -287,6 +287,10 @@ def train(
         bias="none",
     )
     model = get_peft_model(model, peft_config)
+    # PEFT freezes all non-LoRA params - re-enable projection heads and temperature
+    for name, param in model.named_parameters():
+        if "vision_proj" in name or "text_proj" in name or "temperature" in name:
+            param.requires_grad = True
     model.print_trainable_parameters()
     model.to(device)
     model.train()
